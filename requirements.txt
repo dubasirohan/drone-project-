@@ -3,3 +3,9 @@ opencv-python
 pandas
 numpy
 pyyaml
+fastapi
+uvicorn[standard]
+httpx
+requests
+websockets
+torch

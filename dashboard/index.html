@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Crowd Monitoring System</title>
+    <style>
+        :root {
+            --bg-base: #0a0e17;
+            --bg-panel: #111827;
+            --bg-card: #1a1f2e;
+            --accent-primary: #3b82f6;
+            --accent-hover: #2563eb;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+            --color-critical: #dc2626;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --border-color: #1e293b;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --grid-pattern: radial-gradient(circle, var(--border-color) 1px, transparent 1px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-base);
+            background-image: var(--grid-pattern);
+            background-size: 20px 20px;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Utility */
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+        .text-secondary { color: var(--text-secondary); }
+        .text-primary { color: var(--accent-primary); }
+        
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            background-color: var(--text-secondary);
+        }
+        .status-dot.online { background-color: var(--color-success); }
+        .status-dot.offline { background-color: var(--color-danger); }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes pulse-critical {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        .pulse-animation { animation: pulse 2s infinite; }
+        .critical-animation { animation: pulse-critical 1.5s infinite; }
+
+        /* Header */
+        header {
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .header-branding {
+            display: flex;
+            flex-direction: column;
+        }
+        .header-branding span {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: normal;
+            margin-top: 2px;
+        }
+
+        .header-status {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+        
+        .clock {
+            font-variant-numeric: tabular-nums;
+            font-weight: 500;
+            padding-left: 1rem;
+            border-left: 1px solid var(--border-color);
+        }
+
+        /* Main Layout */
+        main {
+            display: flex;
+            flex: 1;
+            padding: 1.5rem;
+            gap: 1.5rem;
+            height: calc(100vh - 150px);
+        }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        /* Left Panel */
+        .left-panel {
+            flex: 6;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-container {
+            flex: 1;
+            position: relative;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #live-feed {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        #zone-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .video-overlay-msg {
+            position: absolute;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            display: none;
+        }
+
+        .source-controls {
+            padding: 1rem;
+            display: flex;
+            gap: 1rem;
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn {
+            background-color: var(--bg-panel);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+        
+        .btn.active {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-style: dashed;
+        }
+
+        /* Right Panel */
+        .right-panel {
+            flex: 4;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        /* Custom Scrollbar */
+        .right-panel::-webkit-scrollbar, .alert-feed::-webkit-scrollbar {
+            width: 6px;
+        }
+        .right-panel::-webkit-scrollbar-track, .alert-feed::-webkit-scrollbar-track {
+            background: var(--bg-panel);
+        }
+        .right-panel::-webkit-scrollbar-thumb, .alert-feed::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .scene-status-card {
+            grid-column: span 2;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid var(--text-secondary);
+            transition: border-color 0.3s;
+        }
+        .scene-status-card .status-val {
+            font-size: 1.25rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Drone Telemetry Placeholder */
+        .drone-telemetry {
+            background-color: var(--bg-card);
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .drone-telemetry-header {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .telemetry-item { display: flex; flex-direction: column; }
+        .telemetry-label { color: var(--text-secondary); font-size: 0.75rem; }
+        .telemetry-status { margin-top: 0.5rem; font-size: 0.75rem; font-style: italic; color: var(--text-secondary); grid-column: span 2;}
+
+        /* Zone Heatmap */
+        .heatmap-container {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .heatmap-grid {
+            display: grid;
+            gap: 4px;
+            margin-top: 1rem;
+        }
+
+        .heatmap-cell {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .heatmap-cell:hover {
+            transform: scale(1.05);
+            z-index: 2;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .cell-id { font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-bottom: 2px;}
+        .cell-count { font-weight: bold; font-size: 1.1rem; }
+        
+        /* Alert Feed */
+        .alert-section {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 250px;
+        }
+
+        .alert-feed {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .alert-item {
+            background-color: var(--bg-card);
+            border-left: 4px solid var(--text-secondary);
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .alert-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+        
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        .alert-time { color: var(--text-secondary); font-size: 0.75rem;}
+        
+        .alert-details {
+            display: none;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--border-color);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .alert-item.expanded .alert-details {
+            display: block;
+        }
+
+        .alert-warning { border-left-color: var(--color-warning); }
+        .alert-critical { border-left-color: var(--color-critical); }
+        .alert-info { border-left-color: var(--accent-primary); }
+
+        /* Chart */
+        .chart-container {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        canvas#history-chart {
+            flex: 1;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            margin-top: auto;
+        }
+
+        .esp-panel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            opacity: 0.6;
+        }
+
+        .esp-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .esp-controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            main {
+                flex-direction: column;
+                height: auto;
+            }
+            .right-panel {
+                overflow-y: visible;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <span>🚁</span>
+            <div class="header-branding">
+                <div>AI-Powered Drone System</div>
+                <span>BCSE497J — Team: Rohan Dubasi & Tejas Bodetti</span>
+            </div>
+        </div>
+        <div class="header-status">
+            <div><span class="status-dot" id="status-gopro"></span> Feed</div>
+            <div><span class="status-dot" id="status-analysis"></span> Analysis</div>
+            <div><span class="status-dot" id="status-esp"></span> ESP32</div>
+            <div class="clock" id="clock">00:00:00</div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Panel -->
+        <div class="left-panel panel">
+            <div class="panel-header">
+                Live Camera Feed
+                <span id="fps-display" class="text-xs text-secondary">FPS: --</span>
+            </div>
+            <div class="video-container" id="video-wrapper">
+                <div class="video-overlay-msg" id="video-msg">Connecting to stream...</div>
+                <img id="live-feed" src="" alt="Live Video Feed" onerror="handleVideoError()" onload="handleVideoLoad()">
+                <canvas id="zone-overlay"></canvas>
+            </div>
+            <div class="source-controls">
+                <button class="btn active" id="btn-gopro" onclick="switchSource('gopro')">GoPro Source</button>
+                <button class="btn" id="btn-webcam" onclick="switchSource('webcam')">Webcam Source</button>
+                <div style="margin-left:auto; display:flex; align-items:center; color: var(--text-secondary); font-size: 0.875rem;">
+                    <span id="source-status-text">Ready</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            
+            <div class="scene-status-card" id="scene-status-card">
+                <div>
+                    <div class="stat-title">Scene Status</div>
+                    <div class="status-val" id="val-scene-density">UNKNOWN</div>
+                </div>
+                <div id="scene-status-icon" style="font-size: 2rem;">--</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Total People</div>
+                    <div class="stat-value text-primary" id="val-total-people">0 <span style="font-size:1rem; opacity:0.5" id="trend-arrow"></span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Peak Count (Session)</div>
+                    <div class="stat-value" id="val-peak-count">0</div>
+                </div>
+            </div>
+
+            <!-- Drone Telemetry Placeholder -->
+            <div class="drone-telemetry">
+                <div class="drone-telemetry-header">
+                    <span>📡</span> Flight & Navigation Module
+                </div>
+                <div class="telemetry-grid">
+                    <div class="telemetry-item">
+                        <span class="telemetry-label">GPS</span>
+                        <span id="drone-gps">--</span>
+                    </div>
+                    <div class="telemetry-item">
+                        <span class="telemetry-label">Altitude</span>
+                        <span id="drone-alt">-- m</span>
+                    </div>
+                    <div class="telemetry-item">
+                        <span class="telemetry-label">Battery</span>
+                        <span id="drone-bat">--%</span>
+                    </div>
+                    <div class="telemetry-item">
+                        <span class="telemetry-label">Flight Mode</span>
+                        <span id="drone-mode">--</span>
+                    </div>
+                    <div class="telemetry-status">Status: Drone telemetry not connected via MAVLink/ROS2</div>
+                </div>
+            </div>
+
+            <div class="heatmap-container">
+                <div class="panel-header" style="padding:0; background:none; border:none; margin-bottom: 0.5rem;">
+                    Zone Heatmap
+                    <span class="text-xs text-secondary" id="heatmap-dims">--x--</span>
+                </div>
+                <div class="heatmap-grid" id="heatmap-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div class="alert-section">
+                <div class="panel-header">
+                    Active Alerts
+                    <span class="text-xs text-secondary" id="val-alert-count">0 alerts</span>
+                </div>
+                <div class="alert-feed" id="alert-feed">
+                    <!-- Populated by JS -->
+                    <div class="text-secondary text-sm" style="text-align:center; margin-top:2rem;">No active alerts</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="panel-header" style="padding:0; background:none; border:none;">
+                    Population Trend (last 60 ticks)
+                </div>
+                <canvas id="history-chart"></canvas>
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="esp-panel">
+            <div class="esp-title">
+                <span>🔌</span> Hardware Control (ESP32)
+            </div>
+            <div class="text-sm text-secondary">
+                Module not connected — coming soon
+            </div>
+            <div class="esp-controls">
+                <button class="btn" disabled>Play Alert Sound</button>
+                <button class="btn" disabled>Activate LED</button>
+                <button class="btn" disabled>Emergency Siren</button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Configuration
+        const host = window.location.hostname || 'localhost';
+        const WS_URL = `ws://${host}:8082/ws`;
+        const STREAM_URL = `http://${host}:8081/preview`;
+        const HEALTH_URL = `http://${host}:8081/health`;
+        const SOURCE_URL = `http://${host}:8081/source`;
+        
+        // State
+        let ws;
+        let reconnectTimeout;
+        let maxRetries = 5;
+        let retryCount = 0;
+        
+        let historyData = [];
+        const maxHistory = 60;
+        let peakCount = 0;
+        let lastTotal = 0;
+        
+        // DOM Elements
+        const liveFeedImg = document.getElementById('live-feed');
+        const videoMsg = document.getElementById('video-msg');
+        const overlayCanvas = document.getElementById('zone-overlay');
+        const ctxOverlay = overlayCanvas.getContext('2d');
+        const chartCanvas = document.getElementById('history-chart');
+        const ctxChart = chartCanvas.getContext('2d');
+        
+        // Density Color Map
+        const densityColors = {
+            'low': { hex: '#10b981', rgba: 'rgba(16, 185, 129, 0.4)', text: 'LOW' },
+            'medium': { hex: '#f59e0b', rgba: 'rgba(245, 158, 11, 0.4)', text: 'MODERATE' },
+            'moderate': { hex: '#f59e0b', rgba: 'rgba(245, 158, 11, 0.4)', text: 'MODERATE' },
+            'high': { hex: '#ef4444', rgba: 'rgba(239, 68, 68, 0.5)', text: 'HIGH' },
+            'critical': { hex: '#dc2626', rgba: 'rgba(220, 38, 38, 0.6)', text: 'CRITICAL' }
+        };
+
+        // Initialize
+        function init() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            // Set stream source
+            liveFeedImg.src = STREAM_URL;
+            
+            // Connect WebSocket
+            connectWebSocket();
+            
+            // Handle window resize for canvases
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                drawChart();
+            });
+            
+            // Check feeds
+            checkHealth();
+            setInterval(checkHealth, 5000);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString();
+        }
+
+        // WebSocket Connection
+        function connectWebSocket() {
+            try {
+                ws = new WebSocket(WS_URL);
+                
+                ws.onopen = () => {
+                    console.log("Analysis WebSocket connected");
+                    document.getElementById('status-analysis').className = 'status-dot online';
+                    retryCount = 0;
+                };
+                
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        processData(data);
+                    } catch (e) {
+                        console.error("Parse error", e);
+                    }
+                };
+                
+                ws.onclose = () => {
+                    document.getElementById('status-analysis').className = 'status-dot offline';
+                    scheduleReconnect();
+                };
+                
+                ws.onerror = (err) => {
+                    console.error("WebSocket error", err);
+                    ws.close();
+                };
+            } catch (e) {
+                scheduleReconnect();
+            }
+        }
+
+        function scheduleReconnect() {
+            clearTimeout(reconnectTimeout);
+            const backoff = Math.min(1000 * Math.pow(2, retryCount), 10000);
+            retryCount++;
+            reconnectTimeout = setTimeout(connectWebSocket, backoff);
+        }
+
+        // Process incoming JSON data
+        function processData(data) {
+            // Update Stats
+            const total = data.total_people || 0;
+            document.getElementById('val-total-people').textContent = total;
+            
+            // Trend
+            const trend = document.getElementById('trend-arrow');
+            if (total > lastTotal) trend.innerHTML = '↑';
+            else if (total < lastTotal) trend.innerHTML = '↓';
+            else trend.innerHTML = '-';
+            lastTotal = total;
+
+            if (total > peakCount) {
+                peakCount = total;
+                document.getElementById('val-peak-count').textContent = peakCount;
+            }
+
+            document.getElementById('fps-display').textContent = `FPS: ${(data.fps || 0).toFixed(1)}`;
+
+            // Update Overall Scene Status
+            updateSceneStatus(data.density_classification || 'low');
+
+            // History chart
+            historyData.push(total);
+            if (historyData.length > maxHistory) historyData.shift();
+            drawChart();
+
+            // Grid / Heatmap & Overlay
+            if (data.grid && data.grid.rows && data.grid.cols) {
+                updateHeatmap(data.grid);
+                drawOverlay(data.grid);
+            }
+
+            // Alerts
+            if (data.alerts) {
+                updateAlerts(data.alerts);
+            }
+        }
+        
+        function updateSceneStatus(density) {
+            const card = document.getElementById('scene-status-card');
+            const val = document.getElementById('val-scene-density');
+            const icon = document.getElementById('scene-status-icon');
+            
+            const colorInfo = densityColors[density] || densityColors['low'];
+            
+            val.textContent = colorInfo.text;
+            val.style.color = colorInfo.hex;
+            card.style.borderLeftColor = colorInfo.hex;
+            
+            if (density === 'critical' || density === 'high') {
+                icon.innerHTML = '⚠️';
+                if(density === 'critical') {
+                    card.classList.add('critical-animation');
+                } else {
+                    card.classList.remove('critical-animation');
+                }
+            } else {
+                icon.innerHTML = '✓';
+                card.classList.remove('critical-animation');
+            }
+        }
+
+        // Zone Heatmap (Right Panel)
+        function updateHeatmap(grid) {
+            const container = document.getElementById('heatmap-grid');
+            document.getElementById('heatmap-dims').textContent = `${grid.rows}x${grid.cols}`;
+            
+            container.style.gridTemplateColumns = `repeat(${grid.cols}, 1fr)`;
+            container.innerHTML = '';
+            
+            // Create a lookup map
+            const zoneMap = {};
+            if(grid.zones) {
+                grid.zones.forEach(z => {
+                    zoneMap[`${z.row}-${z.col}`] = z;
+                });
+            }
+
+            for (let r = 0; r < grid.rows; r++) {
+                for (let c = 0; c < grid.cols; c++) {
+                    const z = zoneMap[`${r}-${c}`] || { count: 0, density: 'low', zone_id: `R${r}C${c}` };
+                    
+                    const cell = document.createElement('div');
+                    cell.className = 'heatmap-cell';
+                    
+                    const colorInfo = densityColors[z.density] || densityColors['low'];
+                    cell.style.backgroundColor = colorInfo.rgba;
+                    cell.style.borderColor = colorInfo.hex;
+                    
+                    if (z.density === 'critical') {
+                        cell.classList.add('pulse-animation');
+                    }
+
+                    cell.innerHTML = `
+                        <div class="cell-id">Zone ${z.zone_id}</div>
+                        <div class="cell-count">${z.count}</div>
+                    `;
+                    
+                    cell.onclick = () => {
+                        alert(`Zone ${z.zone_id}\nCount: ${z.count}\nDensity: ${z.density}\nGPS: -- (Pending Localization Module)`);
+                    };
+
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        // Alerts (Right Panel)
+        let alertHistory = [];
+        function updateAlerts(newAlerts) {
+            const container = document.getElementById('alert-feed');
+            document.getElementById('val-alert-count').textContent = `${newAlerts.length} active`;
+            
+            if (newAlerts.length === 0 && alertHistory.length === 0) return;
+            
+            // Add new alerts to history
+            const now = new Date().toLocaleTimeString();
+            newAlerts.forEach(a => {
+                a.timestamp = now;
+                alertHistory.unshift(a);
+            });
+            
+            if (alertHistory.length > 50) alertHistory = alertHistory.slice(0, 50);
+            
+            container.innerHTML = '';
+            alertHistory.forEach(a => {
+                const el = document.createElement('div');
+                el.className = `alert-item alert-${a.level || 'info'}`;
+                
+                // Expandable structure
+                el.innerHTML = `
+                    <div class="alert-header">
+                        <strong>${a.message}</strong>
+                        <span class="alert-time">${a.timestamp}</span>
+                    </div>
+                    <div class="alert-details">
+                        Zone ID: ${a.zone_id || 'N/A'}<br>
+                        Severity: ${(a.level || 'info').toUpperCase()}<br>
+                        GPS Location: -- (Pending)<br>
+                        Frame Ref: Live Stream
+                    </div>
+                `;
+                
+                el.onclick = () => {
+                    el.classList.toggle('expanded');
+                };
+                
+                container.appendChild(el);
+            });
+        }
+
+        // Canvas Video Overlay (Left Panel)
+        function resizeCanvas() {
+            if (liveFeedImg.clientWidth === 0) return;
+            
+            // Match canvas to actual image display size
+            overlayCanvas.width = liveFeedImg.clientWidth;
+            overlayCanvas.height = liveFeedImg.clientHeight;
+            
+            // Position canvas over image
+            overlayCanvas.style.width = liveFeedImg.clientWidth + 'px';
+            overlayCanvas.style.height = liveFeedImg.clientHeight + 'px';
+            overlayCanvas.style.left = liveFeedImg.offsetLeft + 'px';
+            overlayCanvas.style.top = liveFeedImg.offsetTop + 'px';
+            
+            chartCanvas.width = chartCanvas.parentElement.clientWidth - 32;
+            chartCanvas.height = 160;
+        }
+
+        function drawOverlay(grid) {
+            resizeCanvas();
+            const w = overlayCanvas.width;
+            const h = overlayCanvas.height;
+            if (w === 0 || h === 0) return;
+
+            ctxOverlay.clearRect(0, 0, w, h);
+            
+            if (!grid.zones || grid.zones.length === 0) return;
+
+            const cellW = w / grid.cols;
+            const cellH = h / grid.rows;
+
+            grid.zones.forEach(z => {
+                const x = z.col * cellW;
+                const y = z.row * cellH;
+                
+                const colorInfo = densityColors[z.density] || densityColors['low'];
+                
+                // Fill
+                ctxOverlay.fillStyle = colorInfo.rgba;
+                ctxOverlay.fillRect(x, y, cellW, cellH);
+                
+                // Border
+                ctxOverlay.strokeStyle = colorInfo.hex;
+                ctxOverlay.lineWidth = 1;
+                ctxOverlay.strokeRect(x, y, cellW, cellH);
+                
+                // Text
+                ctxOverlay.fillStyle = '#fff';
+                ctxOverlay.font = 'bold 16px sans-serif';
+                ctxOverlay.textAlign = 'center';
+                ctxOverlay.textBaseline = 'middle';
+                
+                // Draw shadow for readability
+                ctxOverlay.shadowColor = 'rgba(0,0,0,0.8)';
+                ctxOverlay.shadowBlur = 4;
+                ctxOverlay.fillText(z.count, x + cellW/2, y + cellH/2);
+                
+                // Draw Zone ID small
+                ctxOverlay.font = '10px sans-serif';
+                ctxOverlay.fillText(`Z${z.zone_id}`, x + cellW/2, y + cellH/2 + 15);
+                ctxOverlay.shadowBlur = 0;
+            });
+        }
+
+        // Historical Chart (Canvas)
+        function drawChart() {
+            const w = chartCanvas.width;
+            const h = chartCanvas.height;
+            if (w === 0 || h === 0) return;
+            
+            ctxChart.clearRect(0, 0, w, h);
+            
+            if (historyData.length < 2) return;
+            
+            // Find max for scaling
+            const maxVal = Math.max(...historyData, 10); // min scale 10
+            
+            const stepX = w / (maxHistory - 1);
+            const scaleY = (h - 20) / maxVal; // leave 20px top padding
+            
+            // Draw grid lines
+            ctxChart.strokeStyle = '#1e293b';
+            ctxChart.lineWidth = 1;
+            ctxChart.beginPath();
+            ctxChart.moveTo(0, h - (maxVal/2)*scaleY);
+            ctxChart.lineTo(w, h - (maxVal/2)*scaleY);
+            ctxChart.stroke();
+
+            // Draw line
+            ctxChart.beginPath();
+            ctxChart.strokeStyle = '#3b82f6';
+            ctxChart.lineWidth = 2;
+            
+            for (let i = 0; i < historyData.length; i++) {
+                const x = i * stepX;
+                const y = h - (historyData[i] * scaleY);
+                if (i === 0) ctxChart.moveTo(x, y);
+                else ctxChart.lineTo(x, y);
+            }
+            ctxChart.stroke();
+            
+            // Fill area
+            ctxChart.lineTo((historyData.length - 1) * stepX, h);
+            ctxChart.lineTo(0, h);
+            ctxChart.fillStyle = 'rgba(59, 130, 246, 0.2)';
+            ctxChart.fill();
+        }
+
+        // Video / Feed Handlers
+        function handleVideoError() {
+            liveFeedImg.style.display = 'none';
+            videoMsg.style.display = 'block';
+            videoMsg.textContent = 'Stream offline';
+            document.getElementById('status-gopro').className = 'status-dot offline';
+        }
+        
+        function handleVideoLoad() {
+            liveFeedImg.style.display = 'block';
+            videoMsg.style.display = 'none';
+            document.getElementById('status-gopro').className = 'status-dot online';
+            setTimeout(resizeCanvas, 100); // ensure layout settles
+        }
+
+        async function switchSource(source) {
+            document.getElementById('btn-gopro').classList.remove('active');
+            document.getElementById('btn-webcam').classList.remove('active');
+            document.getElementById(`btn-${source}`).classList.add('active');
+            
+            const statusText = document.getElementById('source-status-text');
+            statusText.textContent = `Switching to ${source}...`;
+            
+            try {
+                const res = await fetch(`${SOURCE_URL}?source=${source}`, { method: 'POST' });
+                if (res.ok) {
+                    statusText.textContent = `Source: ${source}`;
+                    // Force image reload
+                    liveFeedImg.src = STREAM_URL + '?t=' + new Date().getTime();
+                } else {
+                    statusText.textContent = 'Failed to switch source';
+                }
+            } catch (err) {
+                statusText.textContent = 'Error contacting backend';
+            }
+        }
+        
+        async function checkHealth() {
+            try {
+                const res = await fetch(HEALTH_URL);
+                if (res.ok) {
+                    // Check if image is hidden but health is ok
+                    if (liveFeedImg.style.display === 'none') {
+                        liveFeedImg.src = STREAM_URL + '?t=' + new Date().getTime();
+                    }
+                }
+            } catch (e) {
+                // Ignore, handled by video error
+            }
+        }
+
+        // Run
+        window.onload = init;
+    </script>
+</body>
+</html>
