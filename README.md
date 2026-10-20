@@ -4,8 +4,8 @@
 **Guide:** Prof. Valarmathi Sudhakar
 
 **Team**
-- Rohan Dubasi (23BRS1119): macOS / Apple Silicon
-- Tejas Ramesh Bodetti (23BRS1180): Windows
+- Rohan Dubasi (23BRS1119)
+- Tejas Ramesh Bodetti (23BRS1180)
 
 ## Overview
 
