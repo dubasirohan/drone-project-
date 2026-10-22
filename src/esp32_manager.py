@@ -28,12 +28,24 @@ import re
 import socket
 import struct
 import subprocess
+<<<<<<< Updated upstream
+=======
+import sys
+>>>>>>> Stashed changes
 import threading
 import time
 from typing import Callable, Optional
 
 import numpy as np
 
+<<<<<<< Updated upstream
+=======
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+>>>>>>> Stashed changes
 # Protocol Constants matching ESP32 firmware
 ESP32_TCP_PORT = 8002
 SAMPLE_RATE = 8000
@@ -41,6 +53,10 @@ MAGIC_HEADER = b"\xA5\x5A"
 MAX_AUDIO_SIZE = 300000
 
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 # ── Synthetic Tones Generation (Offline & Low Latency) ─────────────────
 
 def generate_siren_pcm(duration: float = 3.0) -> bytes:
@@ -95,11 +111,141 @@ def generate_beep_pcm(count: int = 3) -> bytes:
     return full.tobytes()
 
 
+<<<<<<< Updated upstream
 # ── Text-To-Speech to ESP32 DAC PCM Resampler ────────────────────────
+=======
+# ── Text Translation & Text-To-Speech to ESP32 DAC ────────────────────
+
+COMMON_PHRASES = {
+    "hi": {
+        "hello": "नमस्ते",
+        "hi": "नमस्ते",
+        "hey": "नमस्ते",
+        "greetings": "नमस्ते",
+        "stop": "कृपया रुकिए",
+        "warning": "चेतावनी",
+        "danger": "खतरा",
+        "attention": "कृपया ध्यान दें",
+        "attention please": "कृपया ध्यान दें",
+        "disperse": "कृपया बिखर जाएं",
+        "evacuate": "कृपया तुरंत बाहर निकलें",
+        "move": "कृपया आगे बढ़ें",
+        "move forward": "कृपया आगे बढ़ें",
+        "please move forward": "कृपया आगे बढ़ें",
+        "clear the walkway": "कृपया रास्ता साफ़ करें",
+        "clear the road": "कृपया रास्ता साफ़ करें",
+        "please clear the walkway": "कृपया पैदल रास्ता साफ़ करें",
+    },
+    "te": {
+        "hello": "నమస్కారం",
+        "hi": "నమస్కారం",
+        "hey": "నమస్కారం",
+        "stop": "దయచేసి ఆగండి",
+        "warning": "హెచ్చరిక",
+        "attention": "దయచేసి గమనించండి",
+        "attention please": "దయచేసి గమనించండి",
+        "disperse": "దయచేసి వెళ్ళిపోండి",
+        "move": "దయచేసి ముందుకు సాగండి",
+        "move forward": "దయచేసి ముందుకు సాగండి",
+        "please move forward": "దయచేసి ముందుకు సాగండి",
+        "clear the walkway": "దయచేసి నడక మార్గాన్ని క్లియర్ చేయండి",
+    },
+    "ta": {
+        "hello": "வணக்கம்",
+        "hi": "வணக்கம்",
+        "hey": "வணக்கம்",
+        "stop": "நில்லுங்கள்",
+        "warning": "எச்சரிக்கை",
+        "attention": "கவனிக்கவும்",
+        "attention please": "கவனிக்கவும்",
+        "disperse": "கலைந்து செல்லுங்கள்",
+        "move": "முன்னோக்கி செல்லவும்",
+        "move forward": "முன்னோக்கி செல்லவும்",
+        "clear the walkway": "பாதையை அழிக்கவும்",
+    },
+    "mr": {
+        "hello": "नमस्कार",
+        "hi": "नमस्कार",
+        "stop": "कृपया थांबा",
+        "warning": "इशारा",
+        "attention": "कृपया लक्ष द्या",
+        "move": "कृपया पुढे चला",
+        "move forward": "कृपया पुढे चला",
+    },
+    "bn": {
+        "hello": "নমস্কার",
+        "hi": "নমস্কার",
+        "stop": "থামুন",
+        "warning": "সতর্কতা",
+        "attention": "অনুগ্রহ করে শুনুন",
+        "move": "সামনে এগিয়ে যান",
+        "move forward": "সামনে এগিয়ে যান",
+    },
+    "fr": {
+        "hello": "Bonjour",
+        "hi": "Salut",
+        "stop": "Arrêtez-vous",
+        "warning": "Attention",
+        "disperse": "Veuillez vous disperser",
+        "move forward": "Veuillez avancer",
+        "clear the walkway": "Veuillez dégager le passage",
+    }
+}
+
+MYMEMORY_LANG_MAP = {
+    "hi": "hi-IN",
+    "te": "te-IN",
+    "ta": "ta-IN",
+    "mr": "mr-IN",
+    "bn": "bn-IN",
+    "fr": "fr-FR",
+    "es": "es-ES",
+    "de": "de-DE",
+}
+
+
+def translate_text(text: str, target_lang: str) -> str:
+    """Translate operator English input to target language."""
+    if not text or target_lang == "en":
+        return text
+
+    t_clean = text.lower().strip().rstrip(".!?")
+
+    # 1. Check local dictionary for fast, accurate crowd phrases
+    if target_lang in COMMON_PHRASES and t_clean in COMMON_PHRASES[target_lang]:
+        translated = COMMON_PHRASES[target_lang][t_clean]
+        print(f"[esp32_manager] Dictionary translation: '{text}' -> '{translated}' ({target_lang})")
+        return translated
+
+    # 2. Use MyMemoryTranslator for arbitrary sentences
+    try:
+        from deep_translator import MyMemoryTranslator
+        target_tag = MYMEMORY_LANG_MAP.get(target_lang, f"{target_lang}-IN")
+        res = MyMemoryTranslator(source="en-US", target=target_tag).translate(text)
+        if res and res.strip():
+            print(f"[esp32_manager] MyMemory translation: '{text}' -> '{res.strip()}' ({target_lang})")
+            return res.strip()
+    except Exception as exc:
+        print(f"[esp32_manager] MyMemory translation error: {exc}")
+
+    # 3. Fallback: GoogleTranslator
+    try:
+        from deep_translator import GoogleTranslator
+        res = GoogleTranslator(source="auto", target=target_lang).translate(text)
+        if res and res.strip():
+            print(f"[esp32_manager] Google translation: '{text}' -> '{res.strip()}' ({target_lang})")
+            return res.strip()
+    except Exception:
+        pass
+
+    return text
+
+>>>>>>> Stashed changes
 
 def text_to_esp32_pcm(text: str, lang: str = "en") -> Optional[bytes]:
     """
     Convert text to 8000 Hz unsigned 8-bit PCM audio using gTTS and FFmpeg.
+<<<<<<< Updated upstream
     Returns bytes ready to stream directly to ESP32 DAC channel 1.
     """
     cleaned = re.sub(r"[#*_`~>]+", " ", text)
@@ -108,12 +254,32 @@ def text_to_esp32_pcm(text: str, lang: str = "en") -> Optional[bytes]:
         return None
 
     # Limit length so audio fits within ESP32 buffer limits (~35 seconds)
+=======
+    Automatically translates text to target language before synthesizing.
+    Returns bytes ready to stream directly to ESP32 DAC channel 1.
+    """
+    if not text or not text.strip():
+        return None
+
+    # Translate text to target language if not English
+    speech_text = translate_text(text, target_lang=lang) if lang != "en" else text
+
+    # Clean unwanted formatting/control characters while fully preserving all Unicode scripts, matras & diacritics
+    cleaned = re.sub(r"[\x00-\x1f\x7f#*_`~<>{}[\]\\]+", " ", speech_text).strip()
+    if not cleaned:
+        cleaned = speech_text.strip()
+
+>>>>>>> Stashed changes
     cleaned = cleaned[:350]
 
     try:
         from gtts import gTTS
 
+<<<<<<< Updated upstream
         # 1. Synthesize MP3 in memory
+=======
+        print(f"[esp32_manager] Synthesizing speech ({lang}): '{cleaned}'")
+>>>>>>> Stashed changes
         tts = gTTS(text=cleaned, lang=lang, slow=False)
         mp3_buf = BytesIO()
         tts.write_to_fp(mp3_buf)
@@ -298,7 +464,11 @@ class ESP32WirelessManager:
                     self.client_address = client_addr
                     self.connected = True
 
+<<<<<<< Updated upstream
                 print(f"[esp32_manager] ✓ Wireless ESP32 connected from {client_addr[0]}:{client_addr[1]}")
+=======
+                print(f"[esp32_manager] [OK] Wireless ESP32 connected from {client_addr[0]}:{client_addr[1]}")
+>>>>>>> Stashed changes
                 self._handle_client(client_sock)
             except Exception as e:
                 if self.running:
@@ -326,7 +496,11 @@ class ESP32WirelessManager:
                             if now - self._last_btn_time > 0.4:
                                 self._last_btn_time = now
                                 self.last_button_event_iso = datetime.now(timezone.utc).isoformat()
+<<<<<<< Updated upstream
                                 print("[esp32_manager] 🔘 Button Press on ESP32 (GPIO 14)!")
+=======
+                                print("[esp32_manager] [BUTTON] Button Press on ESP32 (GPIO 14)!")
+>>>>>>> Stashed changes
                                 if self.button_callback:
                                     try:
                                         self.button_callback()
@@ -372,17 +546,29 @@ class ESP32WirelessManager:
                 header = MAGIC_HEADER + struct.pack("<I", len(pcm_bytes))
                 client.sendall(header)
 
+<<<<<<< Updated upstream
                 CHUNK_SIZE = 128
                 bytes_sent = 0
                 start_time = time.time()
+=======
+                CHUNK_SIZE = 512
+                bytes_sent = 0
+                start_time = time.time()
+                lead_buffer = 0.5  # Allow 500ms pre-buffer in TCP to prevent jitter/underrun
+>>>>>>> Stashed changes
 
                 while bytes_sent < len(pcm_bytes) and not self._stop_requested:
                     chunk = pcm_bytes[bytes_sent : bytes_sent + CHUNK_SIZE]
                     client.sendall(chunk)
                     bytes_sent += len(chunk)
 
+<<<<<<< Updated upstream
                     # Pace transmission according to 8000 Hz sample rate
                     expected_time = bytes_sent / SAMPLE_RATE
+=======
+                    # Pace transmission according to 8000 Hz sample rate with lead buffer
+                    expected_time = (bytes_sent / SAMPLE_RATE) - lead_buffer
+>>>>>>> Stashed changes
                     elapsed = time.time() - start_time
                     if expected_time > elapsed:
                         time.sleep(expected_time - elapsed)
@@ -424,19 +610,33 @@ class ESP32WirelessManager:
         return False, "Invalid preset definition"
 
     def play_custom_tts(self, text: str, lang: str = "en") -> tuple[bool, str]:
+<<<<<<< Updated upstream
         """Convert custom text to speech and stream to ESP32."""
+=======
+        """Convert custom text to speech, translating if needed, and stream to ESP32."""
+>>>>>>> Stashed changes
         if not text or not text.strip():
             return False, "Text cannot be empty"
 
         if not self.is_esp32_connected():
             return False, "ESP32 is not connected on port 8002"
 
+<<<<<<< Updated upstream
+=======
+        translated_display = translate_text(text, target_lang=lang) if lang != "en" else text
+>>>>>>> Stashed changes
         pcm = text_to_esp32_pcm(text, lang=lang)
         if not pcm:
             return False, "Failed to generate speech audio from text"
 
+<<<<<<< Updated upstream
         ok = self.send_pcm(pcm, label=f"Custom: {text[:25]}...")
         return ok, f"Broadcasting announcement: '{text[:30]}...'"
+=======
+        label = f"[{lang.upper()}] {translated_display[:25]}"
+        ok = self.send_pcm(pcm, label=label)
+        return ok, f"Broadcasting: '{translated_display[:35]}' ({lang.upper()})"
+>>>>>>> Stashed changes
 
 
 # Global singleton instance

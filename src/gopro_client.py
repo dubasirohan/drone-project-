@@ -21,19 +21,39 @@ Endpoints:
 """
 import argparse
 import asyncio
+<<<<<<< Updated upstream
+=======
+import json
+>>>>>>> Stashed changes
 import os
 import socket
 import struct
 import subprocess
+<<<<<<< Updated upstream
+=======
+import sys
+>>>>>>> Stashed changes
 import threading
 import time
 from contextlib import asynccontextmanager
 
+<<<<<<< Updated upstream
+=======
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+>>>>>>> Stashed changes
 import cv2
 import numpy as np
 import requests
 import uvicorn
+<<<<<<< Updated upstream
 from fastapi import FastAPI, HTTPException, Response
+=======
+from fastapi import FastAPI, HTTPException, Response, Request
+>>>>>>> Stashed changes
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -47,7 +67,16 @@ DEFAULT_SAMPLE_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "test", "clip.mp4"
 )
+<<<<<<< Updated upstream
 VALID_SOURCES = ("gopro", "usb", "hotspot", "webcam", "sample")
+=======
+DEFAULT_SCENARIOS_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "test", "scenarios", "scenarios.json"
+)
+VALID_SOURCES = ("gopro", "usb", "hotspot", "webcam", "sample", "scenario", "cycle")
+
+>>>>>>> Stashed changes
 
 
 # ── Network Utilities ────────────────────────────────────────────────
@@ -92,7 +121,11 @@ def scan_for_gopro(subnet: str = None, timeout: float = 1.0) -> str | None:
             )
             if r.status_code == 200:
                 found_ip = ip
+<<<<<<< Updated upstream
                 print(f"[gopro_client] ✓ Found GoPro at {ip}")
+=======
+                print(f"[gopro_client] [OK] Found GoPro at {ip}")
+>>>>>>> Stashed changes
         except Exception:
             pass
 
@@ -128,7 +161,11 @@ def arp_find_gopro() -> str | None:
                             timeout=0.5,
                         )
                         if r.status_code == 200:
+<<<<<<< Updated upstream
                             print(f"[gopro_client] ✓ Found GoPro at {ip_candidate} (via ARP)")
+=======
+                            print(f"[gopro_client] [OK] Found GoPro at {ip_candidate} (via ARP)")
+>>>>>>> Stashed changes
                             return ip_candidate
                     except Exception:
                         pass
@@ -165,7 +202,12 @@ def create_placeholder_frame(text: str) -> np.ndarray:
 
 class CameraStreamer:
     def __init__(self, gopro_ip: str = GOPRO_IP, default_source: str = "gopro",
+<<<<<<< Updated upstream
                  usb_index: int = None, sample_path: str = DEFAULT_SAMPLE_PATH):
+=======
+                 usb_index: int = None, sample_path: str = DEFAULT_SAMPLE_PATH,
+                 scenarios_path: str = DEFAULT_SCENARIOS_PATH):
+>>>>>>> Stashed changes
         self.gopro_ip = gopro_ip
         self.source = default_source
         self.running = False
@@ -180,13 +222,241 @@ class CameraStreamer:
         # USB webcam mode settings
         self.usb_index = usb_index  # None = auto-detect
 
+<<<<<<< Updated upstream
         # Sample video mode settings (Demo Mode)
         self.sample_path = sample_path
         self._sample_fps = 25.0
+=======
+        # Sample video & Demo Clips settings
+        self.sample_path = sample_path
+        self._sample_fps = 25.0
+        self.clips = self._load_clips()
+        self.active_clip: dict | None = None
+        for c in self.clips:
+            if os.path.abspath(c["path"]) == os.path.abspath(self.sample_path):
+                self.active_clip = c
+                break
+        if not self.active_clip and self.clips:
+            self.active_clip = self.clips[0]
+            self.sample_path = self.active_clip["path"]
+
+        # Dataset Scenario Demo settings
+        self.scenarios_path = scenarios_path
+        self.scenarios = self._load_scenarios()
+        self.active_scenario: dict | None = None
+        self.auto_cycle = False
+        self.cycle_interval = 8.0  # seconds per scenario
+        self.last_cycle_time = 0.0
+        self.cycle_idx = 0
+        self._scenario_frame: np.ndarray | None = None
+>>>>>>> Stashed changes
 
         # Hotspot mode: discovered IP
         self._hotspot_gopro_ip: str | None = None
 
+<<<<<<< Updated upstream
+=======
+    def _load_clips(self) -> list:
+        """Scan clips/ and test/ for pre-recorded aerial drone footage."""
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        clips_dir = os.path.join(base_dir, "clips")
+        test_dir = os.path.join(base_dir, "test")
+
+        discovered = []
+        # 1. Main test clip (test/clip.mp4)
+        main_clip = os.path.join(test_dir, "clip.mp4")
+        if os.path.exists(main_clip):
+            discovered.append({
+                "id": "clip_main",
+                "title": "Concourse Flight (Original Drone)",
+                "filename": "clip.mp4",
+                "path": main_clip,
+                "badge": "High Density",
+                "crowd_tier": "HIGH",
+                "color": "#3b82f6",
+                "approx_count": "37 - 45 People",
+                "description": "Aerial UAV video over campus concourse with multi-person tracking."
+            })
+
+        # 2. Clips from clips/ folder
+        if os.path.exists(clips_dir):
+            curated = [
+                {
+                    "id": "clip_1",
+                    "aliases": ["clip_1", "corridor", "clip_corridor"],
+                    "filename": "WhatsApp Video 2026-10-16 at 6.06.13 AM.mp4",
+                    "title": "Clip 1: Aerial Corridor",
+                    "badge": "Active Flow",
+                    "crowd_tier": "MODERATE",
+                    "color": "#f59e0b",
+                    "approx_count": "11 - 15 People",
+                    "description": "Aerial drone viewpoint capturing pedestrian flow through urban corridor."
+                },
+                {
+                    "id": "clip_2",
+                    "aliases": ["clip_2", "walkway", "clip_walkway"],
+                    "filename": "WhatsApp Video 2026-10-16 at 6.05.23 AM.mp4",
+                    "title": "Clip 2: Urban Walkway",
+                    "badge": "Walkway Flow",
+                    "crowd_tier": "LOW",
+                    "color": "#10b981",
+                    "approx_count": "3 - 5 People",
+                    "description": "UAV surveillance of city walkway and perimeter."
+                },
+                {
+                    "id": "clip_3",
+                    "aliases": ["clip_3", "perimeter", "clip_perimeter"],
+                    "filename": "WhatsApp Video 2026-10-16 at 6.08.09 AM.mp4",
+                    "title": "Clip 3: Perimeter Patrol",
+                    "badge": "Perimeter",
+                    "crowd_tier": "LOW",
+                    "color": "#10b981",
+                    "approx_count": "2 - 4 People",
+                    "description": "Perimeter surveillance monitoring low-density sector."
+                },
+                {
+                    "id": "clip_4",
+                    "aliases": ["clip_4", "transit", "clip_transit"],
+                    "filename": "WhatsApp Video 2026-10-16 at 6.04.43 AM.mp4",
+                    "title": "Clip 4: Transit Zone",
+                    "badge": "Transit",
+                    "crowd_tier": "LOW",
+                    "color": "#10b981",
+                    "approx_count": "1 - 2 People",
+                    "description": "Transit sector with sparse pedestrian movement."
+                },
+                {
+                    "id": "clip_5",
+                    "aliases": ["clip_5", "survey", "clip_survey"],
+                    "filename": "WhatsApp Video 2026-10-16 at 6.08.54 AM.mp4",
+                    "title": "Clip 5: Overhead Survey",
+                    "badge": "Overhead",
+                    "crowd_tier": "SURVEY",
+                    "color": "#8b5cf6",
+                    "approx_count": "Aerial Survey",
+                    "description": "High-altitude aerial survey across designated sector."
+                },
+                {
+                    "id": "clip_6",
+                    "aliases": ["clip_6", "sweep", "clip_sweep"],
+                    "filename": "WhatsApp Video 2026-10-16 at 6.09.34 AM.mp4",
+                    "title": "Clip 6: Broad Area Sweep",
+                    "badge": "Area Sweep",
+                    "crowd_tier": "SURVEY",
+                    "color": "#6366f1",
+                    "approx_count": "Area Sweep",
+                    "description": "Wide-area tactical UAV sweep across urban zone."
+                },
+            ]
+
+            handled_filenames = set()
+            for c in curated:
+                fpath = os.path.join(clips_dir, c["filename"])
+                if os.path.exists(fpath):
+                    item = dict(c)
+                    item["path"] = fpath
+                    discovered.append(item)
+                    handled_filenames.add(c["filename"].lower())
+
+            # Also add any additional mp4 files found in clips/
+            extra_idx = 7
+            for fname in sorted(os.listdir(clips_dir)):
+                if fname.lower().endswith(".mp4") and fname.lower() not in handled_filenames:
+                    discovered.append({
+                        "id": f"clip_{extra_idx}",
+                        "aliases": [f"clip_{extra_idx}", fname],
+                        "title": f"Clip {extra_idx}: {fname[:20]}",
+                        "filename": fname,
+                        "path": os.path.join(clips_dir, fname),
+                        "badge": "Sample",
+                        "crowd_tier": "DEMO",
+                        "color": "#3b82f6",
+                        "approx_count": "Demo Video",
+                        "description": f"Pre-recorded drone video: {fname}"
+                    })
+                    extra_idx += 1
+
+        print(f"[gopro_client] [OK] Discovered {len(discovered)} demo video clips.")
+        return discovered
+
+    def set_clip(self, clip_id: str):
+        """Switch to a specific pre-recorded video clip and start looping."""
+        target = None
+        cid = str(clip_id).lower().strip()
+        for c in self.clips:
+            aliases = [a.lower() for a in c.get("aliases", [])]
+            if c["id"].lower() == cid or c["filename"].lower() == cid or cid in aliases:
+                target = c
+                break
+
+        if not target:
+            return False, f"Clip '{clip_id}' not found."
+
+        with self._lock:
+            self._release_cap()
+            self.sample_path = target["path"]
+            self.active_clip = target
+            self.source = "sample"
+            self.active_scenario = None
+            self.status = f"Switching to clip: {target['title']}..."
+            self._frame = create_placeholder_frame(self.status)
+
+        success = self._open_sample_video()
+        if success:
+            print(f"[gopro_client] [OK] Active clip set to: {target['title']} ({target['id']})")
+            return True, target
+        return False, "Failed to open video file."
+
+    def _load_scenarios(self) -> list:
+        """Load curated VisDrone scenario metadata."""
+        if os.path.exists(self.scenarios_path):
+            try:
+                with open(self.scenarios_path, "r", encoding="utf-8") as f:
+                    sc_list = json.load(f)
+                    print(f"[gopro_client] [OK] Loaded {len(sc_list)} dataset demo scenarios from {self.scenarios_path}")
+                    return sc_list
+            except Exception as e:
+                print(f"[gopro_client] Warning: Failed to load scenarios: {e}")
+        return []
+
+    def set_scenario(self, scenario_id: str):
+        """Switch to a specific VisDrone crowd scenario image."""
+        for sc in self.scenarios:
+            if sc["id"] == scenario_id:
+                p = sc.get("file_path")
+                if not p or not os.path.exists(p):
+                    p = os.path.join(os.path.dirname(self.scenarios_path), sc.get("dest_filename", ""))
+                if os.path.exists(p):
+                    img = cv2.imread(p)
+                    if img is not None:
+                        with self._lock:
+                            self._release_cap()
+                            self.source = "scenario"
+                            self.active_scenario = sc
+                            self._scenario_frame = img
+                            self.status = f"Scenario {sc['number']}: {sc['title']} ({sc.get('crowd_tier', 'DEMO')})"
+                            self._frame = img.copy()
+                            self._ret = True
+                        print(f"[gopro_client] [OK] Switched to Scenario {sc['number']}: {sc['title']} [{sc['id']}]")
+                        return True, sc
+        return False, f"Scenario '{scenario_id}' not found."
+
+    def toggle_auto_cycle(self, enabled: bool = None, interval: float = None) -> bool:
+        """Toggle or set automated cycling through demo scenarios."""
+        if interval and interval > 0:
+            self.cycle_interval = interval
+        if enabled is not None:
+            self.auto_cycle = enabled
+        else:
+            self.auto_cycle = not self.auto_cycle
+        if self.auto_cycle:
+            self.last_cycle_time = time.time()
+            print(f"[gopro_client] [OK] Auto-cycle mode ENABLED ({self.cycle_interval}s interval)")
+        else:
+            print("[gopro_client] [X] Auto-cycle mode DISABLED")
+        return self.auto_cycle
+
+>>>>>>> Stashed changes
     def start(self):
         self.running = True
         self._worker = threading.Thread(target=self._capture_loop, daemon=True)
@@ -200,6 +470,7 @@ class CameraStreamer:
         self._release_cap()
 
     def set_source(self, source: str):
+<<<<<<< Updated upstream
         source = source.lower()
         if source not in VALID_SOURCES:
             return False, f"Source must be one of: {', '.join(VALID_SOURCES)}"
@@ -208,6 +479,44 @@ class CameraStreamer:
             self._release_cap()
             self._hotspot_gopro_ip = None
             self.status = f"Switching to {source}..."
+=======
+        src = source.lower().strip()
+        # Direct scenario matching
+        if src.startswith("scenario:"):
+            sc_id = src.split(":", 1)[1]
+            ok, res = self.set_scenario(sc_id)
+            if ok:
+                return True, f"scenario:{sc_id}"
+        elif any(s["id"].lower() == src for s in self.scenarios):
+            ok, res = self.set_scenario(src)
+            if ok:
+                return True, f"scenario:{src}"
+        # Direct clip matching
+        elif src.startswith("clip:"):
+            clip_id = src.split(":", 1)[1]
+            ok, res = self.set_clip(clip_id)
+            if ok:
+                return True, f"clip:{clip_id}"
+        elif any(c["id"].lower() == src for c in self.clips):
+            ok, res = self.set_clip(src)
+            if ok:
+                return True, f"clip:{src}"
+        elif src == "cycle":
+            self.toggle_auto_cycle(True)
+            return True, "cycle"
+
+        if src not in VALID_SOURCES:
+            valid_opts = list(VALID_SOURCES) + [s["id"] for s in self.scenarios] + [c["id"] for c in self.clips]
+            return False, f"Source must be one of: {', '.join(valid_opts)}"
+
+        with self._lock:
+            self.source = src
+            self._release_cap()
+            self._hotspot_gopro_ip = None
+            if src != "scenario":
+                self.active_scenario = None
+            self.status = f"Switching to {src}..."
+>>>>>>> Stashed changes
             self._frame = create_placeholder_frame(self.status)
         return True, self.source
 
@@ -243,7 +552,11 @@ class CameraStreamer:
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
             self._cap = cap
             self.status = "Webcam Active"
+<<<<<<< Updated upstream
             print("[gopro_client] ✓ Webcam opened.")
+=======
+            print("[gopro_client] [OK] Webcam opened.")
+>>>>>>> Stashed changes
             return True
         self.status = "Webcam not found"
         return False
@@ -280,20 +593,35 @@ class CameraStreamer:
                     actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                     self.status = f"USB GoPro Active (dev {idx}, {actual_w}x{actual_h})"
+<<<<<<< Updated upstream
                     print(f"[gopro_client] ✓ USB webcam opened: device {idx} at {actual_w}x{actual_h}")
+=======
+                    print(f"[gopro_client] [OK] USB webcam opened: device {idx} at {actual_w}x{actual_h}")
+>>>>>>> Stashed changes
                     return True
                 cap.release()
 
         self.status = "USB GoPro not found — is GoPro Webcam Utility running?"
+<<<<<<< Updated upstream
         print("[gopro_client] ✗ No USB GoPro webcam device found.")
         print("  → Make sure the GoPro Webcam desktop app is installed and running.")
         print("  → Connect GoPro via USB-C cable.")
         print("  → Check the blue dot in system tray GoPro icon.")
+=======
+        print("[gopro_client] [X] No USB GoPro webcam device found.")
+        print("  -> Make sure the GoPro Webcam desktop app is installed and running.")
+        print("  -> Connect GoPro via USB-C cable.")
+        print("  -> Check the blue dot in system tray GoPro icon.")
+>>>>>>> Stashed changes
         return False
 
     def _open_gopro_wifi(self) -> bool:
         """
+<<<<<<< Updated upstream
         Open GoPro via direct WiFi AP connection (laptop WiFi → GoPro WiFi).
+=======
+        Open GoPro via direct WiFi AP connection (laptop WiFi -> GoPro WiFi).
+>>>>>>> Stashed changes
         GoPro is at 10.5.5.9 (or configured --gopro-ip).
         """
         ip = self.gopro_ip
@@ -304,6 +632,7 @@ class CameraStreamer:
         try:
             requests.get(f"{base}/gopro/camera/state", timeout=2)
             requests.get(f"{base}/gopro/camera/stream/start", timeout=2)
+<<<<<<< Updated upstream
             print(f"[gopro_client] ✓ GoPro stream start signaled via HTTP.")
         except Exception as e:
             print(f"[gopro_client] ✗ GoPro HTTP API unreachable at {ip}: {e}")
@@ -311,6 +640,16 @@ class CameraStreamer:
             print(f"  → The GoPro WiFi SSID is usually 'GP-XXXXXXXX'")
 
         return self._open_udp_stream(ip)
+=======
+            print(f"[gopro_client] [OK] GoPro stream start signaled via HTTP.")
+            return self._open_udp_stream(ip)
+        except Exception as e:
+            self.status = "GoPro Disconnected (10.5.5.9). Connect to GoPro Wi-Fi or USB."
+            print(f"[gopro_client] [X] GoPro HTTP API unreachable at {ip}: {e}")
+            print(f"  -> Is your laptop WiFi connected to the GoPro's WiFi network?")
+            print(f"  -> The GoPro WiFi SSID is usually 'GP-XXXXXXXX'")
+            return False
+>>>>>>> Stashed changes
 
     def _open_gopro_hotspot(self) -> bool:
         """
@@ -328,10 +667,17 @@ class CameraStreamer:
 
         if ip is None:
             self.status = "GoPro not found on hotspot network"
+<<<<<<< Updated upstream
             print("[gopro_client] ✗ Could not find GoPro on the network.")
             print("  → Make sure GoPro is connected to the same hotspot as this laptop.")
             print("  → Check your phone's hotspot connected devices for the GoPro's IP.")
             print("  → You can manually specify: --gopro-ip <ip_from_hotspot>")
+=======
+            print("[gopro_client] [X] Could not find GoPro on the network.")
+            print("  -> Make sure GoPro is connected to the same hotspot as this laptop.")
+            print("  -> Check your phone's hotspot connected devices for the GoPro's IP.")
+            print("  -> You can manually specify: --gopro-ip <ip_from_hotspot>")
+>>>>>>> Stashed changes
             return False
 
         self._hotspot_gopro_ip = ip
@@ -340,6 +686,7 @@ class CameraStreamer:
         # Signal GoPro to start preview stream
         try:
             requests.get(f"{base}/gopro/camera/state", timeout=2)
+<<<<<<< Updated upstream
             print(f"[gopro_client] ✓ GoPro HTTP API responding at {ip}")
             requests.get(f"{base}/gopro/camera/stream/start", timeout=2)
             print(f"[gopro_client] ✓ Stream start signaled.")
@@ -347,6 +694,15 @@ class CameraStreamer:
             print(f"[gopro_client] ⚠ GoPro HTTP API at {ip} — {e}")
             print(f"  → The GoPro may block API in STA mode on newer firmware.")
             print(f"  → Consider USB webcam mode instead (--source usb)")
+=======
+            print(f"[gopro_client] [OK] GoPro HTTP API responding at {ip}")
+            requests.get(f"{base}/gopro/camera/stream/start", timeout=2)
+            print(f"[gopro_client] [OK] Stream start signaled.")
+        except Exception as e:
+            print(f"[gopro_client] [!] GoPro HTTP API at {ip} - {e}")
+            print(f"  -> The GoPro may block API in STA mode on newer firmware.")
+            print(f"  -> Consider USB webcam mode instead (--source usb)")
+>>>>>>> Stashed changes
 
         return self._open_udp_stream(ip)
 
@@ -364,7 +720,11 @@ class CameraStreamer:
                 if cap.isOpened():
                     self._cap = cap
                     self.status = f"GoPro Stream Connected ({gopro_ip})"
+<<<<<<< Updated upstream
                     print(f"[gopro_client] ✓ Connected to UDP stream: {u}")
+=======
+                    print(f"[gopro_client] [OK] Connected to UDP stream: {u}")
+>>>>>>> Stashed changes
                     return True
             except Exception as e:
                 print(f"[gopro_client] Error trying {u}: {e}")
@@ -380,7 +740,11 @@ class CameraStreamer:
         print(f"[gopro_client] Opening sample footage: {self.sample_path}...")
         if not os.path.exists(self.sample_path):
             self.status = f"Sample clip not found: {os.path.basename(self.sample_path)}"
+<<<<<<< Updated upstream
             print(f"[gopro_client] ✗ Sample clip not found at: {self.sample_path}")
+=======
+            print(f"[gopro_client] [ERROR] Sample clip not found at: {self.sample_path}")
+>>>>>>> Stashed changes
             return False
 
         cap = cv2.VideoCapture(self.sample_path)
@@ -390,8 +754,14 @@ class CameraStreamer:
             self._sample_fps = fps_val if (fps_val and fps_val > 0) else 25.0
             actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+<<<<<<< Updated upstream
             self.status = f"Sample Footage Active ({actual_w}x{actual_h} @ {int(self._sample_fps)}fps)"
             print(f"[gopro_client] ✓ Sample footage loaded: {actual_w}x{actual_h} ({self._sample_fps} fps). Looping enabled.")
+=======
+            clip_title = self.active_clip["title"] if self.active_clip else os.path.basename(self.sample_path)
+            self.status = f"{clip_title} ({actual_w}x{actual_h} @ {int(self._sample_fps)}fps)"
+            print(f"[gopro_client] [OK] Sample footage loaded: {actual_w}x{actual_h} ({self._sample_fps:.1f} fps). Looping enabled.")
+>>>>>>> Stashed changes
             return True
 
         self.status = "Failed to load sample clip"
@@ -412,6 +782,11 @@ class CameraStreamer:
             return self._open_gopro_hotspot()
         elif self.source == "sample":
             return self._open_sample_video()
+<<<<<<< Updated upstream
+=======
+        elif self.source == "scenario":
+            return self._scenario_frame is not None
+>>>>>>> Stashed changes
 
         return False
 
@@ -419,6 +794,36 @@ class CameraStreamer:
 
     def _capture_loop(self):
         while self.running:
+<<<<<<< Updated upstream
+=======
+            # 1. Handle auto-cycling through scenarios and clips if enabled
+            if self.auto_cycle and (len(self.scenarios) > 0 or len(self.clips) > 0):
+                now = time.time()
+                if self.last_cycle_time == 0.0 or (now - self.last_cycle_time) >= self.cycle_interval:
+                    self.last_cycle_time = now
+                    total_items = len(self.scenarios) + len(self.clips)
+                    if self.cycle_idx < len(self.scenarios):
+                        sc = self.scenarios[self.cycle_idx]
+                        self.set_scenario(sc["id"])
+                    else:
+                        clip_idx = self.cycle_idx - len(self.scenarios)
+                        if clip_idx < len(self.clips):
+                            cl = self.clips[clip_idx]
+                            self.set_clip(cl["id"])
+                    self.cycle_idx = (self.cycle_idx + 1) % max(1, total_items)
+
+            # 2. Handle static scenario frame streaming
+            if self.source == "scenario":
+                if self._scenario_frame is not None:
+                    with self._lock:
+                        self._ret = True
+                        self._frame = self._scenario_frame.copy()
+                    time.sleep(0.04)  # ~25 fps live streaming
+                else:
+                    time.sleep(0.1)
+                continue
+
+>>>>>>> Stashed changes
             if self._cap is None or not self._cap.isOpened():
                 success = self._open_camera()
                 if not success:
@@ -495,11 +900,82 @@ def health():
         "source": camera.source,
         "detail": camera.status,
         "gopro_ip": camera.active_gopro_ip,
+<<<<<<< Updated upstream
+=======
+        "scenario": camera.active_scenario,
+        "active_clip": camera.active_clip,
+        "clips_count": len(camera.clips),
+        "auto_cycle": camera.auto_cycle,
+    }
+
+
+@app.get("/clips")
+def get_clips():
+    """List all available demo video clips."""
+    return {
+        "status": "ok",
+        "clips": camera.clips,
+        "active_clip": camera.active_clip,
+    }
+
+
+@app.post("/clip")
+def select_clip(id: str):
+    """Switch camera source to a specific video clip."""
+    ok, res = camera.set_clip(id)
+    if not ok:
+        raise HTTPException(400, detail=res)
+    return {"status": "ok", "clip": res}
+
+
+
+@app.get("/scenarios")
+def get_scenarios():
+    """List all curated VisDrone crowd scenarios for demo evaluation."""
+    return {
+        "status": "ok",
+        "scenarios": camera.scenarios,
+        "active_scenario": camera.active_scenario,
+        "auto_cycle": camera.auto_cycle,
+        "cycle_interval": camera.cycle_interval,
+    }
+
+
+@app.post("/scenario")
+def select_scenario(id: str):
+    """Switch camera source to a specific VisDrone crowd scenario."""
+    ok, res = camera.set_scenario(id)
+    if not ok:
+        raise HTTPException(400, detail=res)
+    return {"status": "ok", "scenario": res}
+
+
+@app.post("/scenario/cycle")
+def toggle_scenario_cycle(enabled: bool = None, interval: float = None):
+    """Toggle or configure automatic cycling through all demo scenarios."""
+    state = camera.toggle_auto_cycle(enabled, interval)
+    return {
+        "status": "ok",
+        "auto_cycle": state,
+        "cycle_interval": camera.cycle_interval,
+>>>>>>> Stashed changes
     }
 
 
 @app.post("/source")
+<<<<<<< Updated upstream
 def switch_source(source: str):
+=======
+async def switch_source(req: Request, source: str = None):
+    if not source:
+        try:
+            body = await req.json()
+            source = body.get("source")
+        except Exception:
+            pass
+    if not source:
+        raise HTTPException(400, detail="Missing 'source' in query parameter or JSON body")
+>>>>>>> Stashed changes
     ok, msg = camera.set_source(source)
     if not ok:
         raise HTTPException(400, detail=msg)
@@ -587,6 +1063,21 @@ Examples:
         "--sample-path", type=str, default=DEFAULT_SAMPLE_PATH,
         help="Path to sample video file for demo mode (default: test/clip.mp4)",
     )
+<<<<<<< Updated upstream
+=======
+    parser.add_argument(
+        "--scenario", type=str, default=None,
+        help="Initial scenario ID (e.g., low_park, moderate_campus, high_plaza, critical_market)",
+    )
+    parser.add_argument(
+        "--auto-cycle", action="store_true",
+        help="Automatically cycle through all dataset scenarios during demo",
+    )
+    parser.add_argument(
+        "--cycle-interval", type=float, default=8.0,
+        help="Interval in seconds between scenario transitions (default: 8.0)",
+    )
+>>>>>>> Stashed changes
     args = parser.parse_args()
 
     camera.gopro_ip = args.gopro_ip
@@ -594,6 +1085,7 @@ Examples:
     camera.usb_index = args.usb_index
     camera.sample_path = args.sample_path
 
+<<<<<<< Updated upstream
     print("=" * 60)
     print("  GoPro Handler Server")
     print("=" * 60)
@@ -607,5 +1099,29 @@ Examples:
         print(f"  Network:  auto-discover GoPro on local subnet")
     elif args.source == "sample":
         print(f"  Sample:   {args.sample_path}")
+=======
+    if args.scenario:
+        camera.set_scenario(args.scenario)
+    elif args.auto_cycle:
+        camera.toggle_auto_cycle(True, interval=args.cycle_interval)
+
+    print("=" * 60)
+    print("  GoPro Handler Server")
+    print("=" * 60)
+    print(f"  Source:   {camera.source}")
+    print(f"  Host:     {args.host}:{args.port}")
+    if camera.source == "gopro":
+        print(f"  GoPro IP: {args.gopro_ip}")
+    elif camera.source == "usb":
+        print(f"  USB idx:  {args.usb_index or 'auto-detect'}")
+    elif camera.source == "hotspot":
+        print(f"  Network:  auto-discover GoPro on local subnet")
+    elif camera.source == "sample":
+        print(f"  Sample:   {args.sample_path}")
+    elif camera.source == "scenario":
+        print(f"  Scenario: {camera.active_scenario['title'] if camera.active_scenario else 'Active'}")
+    if camera.auto_cycle:
+        print(f"  AutoCycle: ENABLED ({camera.cycle_interval}s interval)")
+>>>>>>> Stashed changes
     print("=" * 60)
     uvicorn.run(app, host=args.host, port=args.port)

@@ -1,0 +1,7 @@
+tracker_type: bytetrack
+track_high_thresh: 0.25   # Lower detection threshold for initiating tracks
+track_low_thresh: 0.05    # Lower threshold for keeping low-confidence tracks alive
+new_track_thresh: 0.15    # Threshold for creating a new track
+track_buffer: 60          # Keep lost tracks alive longer (2 seconds at 30fps)
+match_thresh: 0.7         # Association similarity threshold
+fuse_score: True          # Required by ultralytics ByteTrack

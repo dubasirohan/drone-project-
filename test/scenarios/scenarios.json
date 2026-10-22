@@ -1,0 +1,80 @@
+[
+  {
+    "id": "low_park",
+    "number": 1,
+    "title": "Low Density - Park Walkway",
+    "crowd_tier": "LOW",
+    "badge": "Low Density",
+    "color": "#10b981",
+    "approx_count": "2 - 4 People",
+    "description": "Daylight aerial perspective over open park grounds. Dispersed pedestrians in non-congested zones. Normal monitoring baseline.",
+    "src_path": "dataset/VisDrone2019-DET-val/VisDrone2019-DET-val/images/0000154_00001_d_0000001.jpg",
+    "dest_filename": "01_low_density_park.jpg",
+    "file_path": "test\\scenarios\\01_low_density_park.jpg"
+  },
+  {
+    "id": "low_street",
+    "number": 2,
+    "title": "Low Density - Urban Street",
+    "crowd_tier": "LOW",
+    "badge": "Low Density",
+    "color": "#10b981",
+    "approx_count": "2 - 5 People",
+    "description": "Quiet residential street with isolated pedestrians and cyclists. Zero bottleneck hazard.",
+    "src_path": "dataset/VisDrone2019-DET-val/VisDrone2019-DET-val/images/0000194_00200_d_0000120.jpg",
+    "dest_filename": "02_low_density_street.jpg",
+    "file_path": "test\\scenarios\\02_low_density_street.jpg"
+  },
+  {
+    "id": "moderate_campus",
+    "number": 3,
+    "title": "Moderate Density - Campus Concourse",
+    "crowd_tier": "MODERATE",
+    "badge": "Moderate Density",
+    "color": "#f59e0b",
+    "approx_count": "15 - 22 People",
+    "description": "Full HD 1080p aerial view of university concourse. Coordinated pedestrian flow across center zones with minor grouping.",
+    "src_path": "dataset/VisDrone2019-DET-train/VisDrone2019-DET-train/images/0000137_00509_d_0000159.jpg",
+    "dest_filename": "03_moderate_density_campus.jpg",
+    "file_path": "test\\scenarios\\03_moderate_density_campus.jpg"
+  },
+  {
+    "id": "high_plaza",
+    "number": 4,
+    "title": "High Density - Commercial Plaza",
+    "crowd_tier": "HIGH",
+    "badge": "High Density",
+    "color": "#f97316",
+    "approx_count": "28 - 37 People",
+    "description": "Dense urban shopping plaza with multiple pedestrian clusters and developing congestion. Reaches Warning Alert threshold.",
+    "src_path": "dataset/VisDrone2019-DET-val/VisDrone2019-DET-val/images/0000086_01084_d_0000003.jpg",
+    "dest_filename": "04_high_density_plaza.jpg",
+    "file_path": "test\\scenarios\\04_high_density_plaza.jpg"
+  },
+  {
+    "id": "critical_market",
+    "number": 5,
+    "title": "Critical Density - Market Bottleneck",
+    "crowd_tier": "CRITICAL",
+    "badge": "Critical Density",
+    "color": "#ef4444",
+    "approx_count": "40 - 46 People",
+    "description": "Heavy pedestrian concentration entering a constricted market corridor. High stampede risk triggers automated Emergency Siren alert.",
+    "src_path": "dataset/VisDrone2019-DET-train/VisDrone2019-DET-train/images/0000068_03714_d_0000012.jpg",
+    "dest_filename": "05_critical_density_market.jpg",
+    "file_path": "test\\scenarios\\05_critical_density_market.jpg"
+  },
+  {
+    "id": "night_square",
+    "number": 6,
+    "title": "Night Surveillance - Urban Square",
+    "crowd_tier": "HIGH",
+    "badge": "Night High Density",
+    "color": "#8b5cf6",
+    "approx_count": "30 - 36 People",
+    "description": "Low-light nighttime aerial surveillance under municipal streetlights. Demonstrates deep-learning detection robustness in shadow.",
+    "src_path": "dataset/VisDrone2019-DET-train/VisDrone2019-DET-train/images/0000070_05163_d_0000002.jpg",
+    "dest_filename": "06_night_density_square.jpg",
+    "file_path": "test\\scenarios\\06_night_density_square.jpg"
+  }
+]
